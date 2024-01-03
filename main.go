@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+type config struct {
+	inDir  string
+	outDir string
+}
+
 type processImageArgs struct {
 	fileName string
 	filePath string
@@ -106,19 +111,19 @@ func processImage(args processImageArgs) error {
 func init() {}
 
 func main() {
-	var (
-		flagInDir  *string = flag.String("in", "./", "The input directory")
-		flagOutDir *string = flag.String("out", "", "The output directory")
-	)
+	cfg := config{}
+
+	flag.StringVar(&cfg.inDir, "in", "./", "The input directory")
+	flag.StringVar(&cfg.outDir, "out", "", "The output directory")
 
 	flag.Parse()
 
-	if *flagOutDir == "" {
-		_, _ = fmt.Fprintln(os.Stderr, "the output directory is missing")
+	if cfg.outDir == "" {
+		_, _ = fmt.Fprintln(os.Stderr, "The output directory is missing")
 		os.Exit(1)
 	}
 
-	outDir, _ := filepath.Abs(*flagOutDir)
+	outDir, _ := filepath.Abs(cfg.outDir)
 	numCPU := runtime.NumCPU()
 	wg := &sync.WaitGroup{}
 	errList := &errorList{}
@@ -135,9 +140,9 @@ func main() {
 		}
 	}(errList, errChan)
 
-	dir, err := ioutil.ReadDir(*flagInDir)
+	dir, err := ioutil.ReadDir(cfg.inDir)
 	if err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("failed to reading directory '%s': %w", *flagInDir, err))
+		_, _ = fmt.Fprintln(os.Stderr, fmt.Errorf("failed to read directory '%s': %w", cfg.inDir, err))
 		os.Exit(1)
 	}
 
@@ -145,7 +150,7 @@ func main() {
 		if fi.IsDir() {
 			continue
 		}
-		filePath, _ := filepath.Abs(filepath.Join(*flagInDir, fi.Name()))
+		filePath, _ := filepath.Abs(filepath.Join(cfg.inDir, fi.Name()))
 		processImageChan <- processImageArgs{fi.Name(), filePath, outDir}
 	}
 
